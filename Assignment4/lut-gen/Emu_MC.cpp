@@ -81,6 +81,7 @@ Vec3f IntegrateBRDF(Vec3f V, float roughness, float NdotV) {
     Vec3f N = Vec3f(0.0, 0.0, 1.0);
     
     samplePoints sampleList = squareToCosineHemisphere(sample_count);
+    //使用蒙特卡洛方法计算二重积分
     for (int i = 0; i < sample_count; i++) {
       // TODO: To calculate (fr * ni) / p_o here
         Vec3f L = normalize(sampleList.directions[i]);
@@ -93,9 +94,11 @@ Vec3f IntegrateBRDF(Vec3f V, float roughness, float NdotV) {
         float G = GeometrySmith(roughness, NdotV, NdotL);
         float F = 1.0f;
 
+        //这里使用cos还是sin替换mu其实推导出来的公式是一样的
         float mu = NdotL;
         float numerator = NDF * G * F;
         float denominator = 4.0 * NdotV * NdotL;
+        //假设入射光为1，这里计算brdf*mu
         A = B = C += numerator / denominator / pdf * mu;
     }
 
@@ -105,8 +108,10 @@ Vec3f IntegrateBRDF(Vec3f V, float roughness, float NdotV) {
 int main() {
     uint8_t data[resolution * resolution * 3];
     float step = 1.0 / resolution;
+    //在纹理的横纵坐标上计算
     for (int i = 0; i < resolution; i++) {
         for (int j = 0; j < resolution; j++) {
+            
             float roughness = step * (static_cast<float>(i) + 0.5f);
             float NdotV = step * (static_cast<float>(j) + 0.5f);
             Vec3f V = Vec3f(std::sqrt(1.f - NdotV * NdotV), 0.f, NdotV);
