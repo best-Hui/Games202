@@ -21,17 +21,21 @@ typedef struct samplePoints {
 	std::vector<float> PDFs;
 }samplePoints;
 
-void setRGB(int x, int y, float alpha, unsigned char *data) {
-	data[3 * (resolution * x + y) + 0] = uint8_t(alpha);
-    data[3 * (resolution * x + y) + 1] = uint8_t(alpha);
-    data[3 * (resolution * x + y) + 2] = uint8_t(alpha);
+void setRGB(int x, int y, float alpha, unsigned char* data) {
+    data[3 * ( resolution * x + y ) + 0] = uint8_t(alpha);
+    data[3 * ( resolution * x + y ) + 1] = uint8_t(alpha);
+    data[3 * ( resolution * x + y ) + 2] = uint8_t(alpha);
 }
 
-void setRGB(int x, int y, Vec3f alpha, unsigned char *data) {
-	data[3 * (resolution * x + y) + 0] = uint8_t(alpha.x);
-    data[3 * (resolution * x + y) + 1] = uint8_t(alpha.y);
-    data[3 * (resolution * x + y) + 2] = uint8_t(alpha.z);
+void setRGB(int x, int y, Vec3f alpha, unsigned char* data) {
+    int tmp = 0;
+    if (alpha.x > 255)
+        alpha.x = 255;
+    data[3 * ( resolution * x + y ) + 0] = tmp = uint8_t(alpha.x);
+    data[3 * ( resolution * x + y ) + 1] = tmp = uint8_t(alpha.y);
+    data[3 * ( resolution * x + y ) + 2] = tmp = uint8_t(alpha.z);
 }
+
 
 samplePoints squareToCosineHemisphere(int sample_count){
     samplePoints samlpeList;
@@ -57,14 +61,35 @@ samplePoints squareToCosineHemisphere(int sample_count){
     return samlpeList;
 }
 
-Vec3f getEmu(int x, int y, unsigned char *data) {
-    return Vec3f(data[3 * (resolution * x + y) + 0],
-                 data[3 * (resolution * x + y) + 1],
-                 data[3 * (resolution * x + y) + 2]);
+Vec3f getEmu(int x, int y, unsigned char* data) {
+    return Vec3f(data[3 * ( resolution * x + y ) + 0],
+        data[3 * ( resolution * x + y ) + 1],
+        data[3 * ( resolution * x + y ) + 2]);
 }
 
-Vec3f IntegrateEmu(float NdotV, Vec3f Ei) {
-    return Ei * NdotV * 2.0f;
+//根据读取到的Emu进行积分
+Vec3f IntegrateEmu(Vec3f V, float roughness, float NdotV, Vec3f Ei) {
+    Vec3f Eavg = Vec3f(0.0f);
+    const int sample_count = 1024;
+    Vec3f N = Vec3f(0.0, 0.0, 1.0);
+
+    samplePoints sampleList = squareToCosineHemisphere(sample_count);
+    //采样并不会改变Eavg的结果，因为采样不会影响Ei * NdotV的值，这是函数参数传入的
+    for (int i = 0; i < sample_count; i++) {
+        Vec3f L = sampleList.directions[i];
+        Vec3f H = normalize(V + L);
+
+        float NoL = std::max(L.z, 0.0f);
+        float NoH = std::max(H.z, 0.0f);
+        float VoH = std::max(dot(V, H), 0.0f);
+        float NoV = std::max(dot(N, V), 0.0f);
+
+        // TODO: To calculate Eavg here
+        Eavg += Ei * NdotV * 2;
+    }
+    auto t = Eavg / sample_count;
+    //std::cout << t.x << std::endl;
+    return Eavg / sample_count;
 }
 
 
@@ -83,7 +108,7 @@ int main() {
         // | rough（i）
         // flip it if you want to write the data on picture 
         uint8_t* data = new uint8_t[resolution * resolution * 3];
-        float step = 1.0 / resolution;
+        double step = 1.0 / resolution;
         Vec3f Eavg = Vec3f(0.0);
 		for (int i = 0; i < resolution; i++) 
         {
@@ -94,11 +119,11 @@ int main() {
                 Vec3f V = Vec3f(std::sqrt(1.f - NdotV * NdotV), 0.f, NdotV);
                 //从左下角开始读取
                 Vec3f Ei = getEmu((resolution - 1 - i), j,Edata);
-                Eavg += IntegrateEmu(NdotV, Ei);
-                Eavg = Eavg * step;
+                Eavg += IntegrateEmu(V,roughness,NdotV, Ei);
+                
                 setRGB(i, j, 0.0, data);
 			}
-
+            Eavg = Eavg * step;
             for(int k = 0; k < resolution; k++)
             {
                 setRGB(i, k, Eavg, data);

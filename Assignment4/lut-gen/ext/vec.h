@@ -111,3 +111,4 @@ Vec3<Float> min(const Vec3<Float> &a, const Vec3<Float> &b) {
 
 using Vec3f = Vec3<float>;
 using Vec2f = Vec2<float>;
+using Vec3d = Vec2<double>;
