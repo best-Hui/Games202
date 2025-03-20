@@ -45,7 +45,7 @@ class WebGLRenderer {
         light.meshRender.mesh.transform.translate = light.entity.lightPos;
         light.meshRender.draw(this.camera, null, updatedParamters);
 
-        // Shadow pass
+        // Shadow pass，第一个Shadow Pass先绘制场景的shadow map
         gl.bindFramebuffer(gl.FRAMEBUFFER, light.entity.fbo);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         for (let i = 0; i < this.shadowMeshes.length; i++) {
@@ -54,7 +54,7 @@ class WebGLRenderer {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
 
-        // Buffer pass
+        // Buffer pass，第二个是GBuffer Pass，把shadow map，和模型的diffuse map、normal map传入shader，最后生成diffuse、depth、normal、shadow、worldPos五个GBuffer信息
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.camera.fbo);
         gl.clearColor(1.0, 1.0, 1.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -92,7 +92,7 @@ class WebGLRenderer {
         }
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        // Camera pass
+        // Camera pass，渲染最终显示内容，对应的fragment shader是ssrFragment.glsl，基础部分要实现的内容都在这个shader中实现。
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.viewport(0, 0, windowWidth, windowHeight);
         for (let i = 0; i < this.meshes.length; i++) {

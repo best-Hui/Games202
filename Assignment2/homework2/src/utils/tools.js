@@ -138,6 +138,7 @@ function mat4Matrix2mathMatrix(rotationMatrix){
 function getMat3ValueFromRGB(precomputeL){
 
     let colorMat3 = [];
+	// rgb三个通道
     for(var i = 0; i<3; i++){
         colorMat3[i] = mat3.fromValues( precomputeL[0][i], precomputeL[1][i], precomputeL[2][i],
 										precomputeL[3][i], precomputeL[4][i], precomputeL[5][i],

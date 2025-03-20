@@ -100,9 +100,9 @@ function GAMES202Main() {
 	let ssrFragWorldSpace = "./src/shaders/ssrShader/ssrFragment.glsl";
 	let ssrFragTextrueSpace = "./src/shaders/ssrShader/ssrFragment_TextureSpace.glsl";
 	let ssrFragHizTextureSpace = "./src/shaders/ssrShader/ssrFragment_HizTextureSpace.glsl";
-	loadGLTF(renderer, 'assets/cube/', 'cube1', 'SSRMaterial',uZBufferParams,ssrFragHizTextureSpace);
+	loadGLTF(renderer, 'assets/cube/', 'cube1', 'SSRMaterial',uZBufferParams,ssrFragWorldSpace);
 	// loadGLTF(renderer, 'assets/cube/', 'cube2', 'SSRMaterial',uZBufferParams,ssrFragHizTextureSpace);
-	// loadGLTF(renderer, 'assets/cave/', 'cave', 'SSRMaterial',uZBufferParams,ssrFragHizTextureSpace);
+	// loadGLTF(renderer, 'assets/cave/', 'cave', 'SSRMaterial',uZBufferParams,ssrFragWorldSpace);
 
 	// mipMapLevel = 5;
 	mipMapLevel = Math.floor(Math.log2(Math.max(window.screen.width, window.screen.height)));

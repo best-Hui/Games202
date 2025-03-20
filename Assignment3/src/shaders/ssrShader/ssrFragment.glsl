@@ -27,6 +27,7 @@ in vec4 vPosWorld;
 
 out vec4 FragColor;
 
+//随机数生成函数
 float Rand1(inout float p) {
   p = fract(p * .1031);
   p *= p + 33.33;
@@ -34,16 +35,19 @@ float Rand1(inout float p) {
   return fract(p);
 }
 
+//随机数生成函数
 vec2 Rand2(inout float p) {
   return vec2(Rand1(p), Rand1(p));
 }
 
+//随机数生成函数，根据片段坐标初始化随机数种子
 float InitRand(vec2 uv) {
 	vec3 p3  = fract(vec3(uv.xyx) * .1031);
   p3 += dot(p3, p3.yzx + 33.33);
   return fract((p3.x + p3.y) * p3.z);
 }
 
+//半球面均匀采样函数，返回一个局部坐标系的位置
 vec3 SampleHemisphereUniform(inout float s, out float pdf) {
   vec2 uv = Rand2(s);
   float z = uv.x;
@@ -54,6 +58,7 @@ vec3 SampleHemisphereUniform(inout float s, out float pdf) {
   return dir;
 }
 
+//半球面基于余弦分布的采样，返回一个局部坐标系的位置
 vec3 SampleHemisphereCos(inout float s, out float pdf) {
   vec2 uv = Rand2(s);
   float z = sqrt(1.0 - uv.x);
@@ -64,6 +69,7 @@ vec3 SampleHemisphereCos(inout float s, out float pdf) {
   return dir;
 }
 
+//局部坐标系构建，根据法线n构建局部坐标系，生成两个正交基向量b1和b2
 void LocalBasis(vec3 n, out vec3 b1, out vec3 b2) {
   float sign_ = sign(n.z);
   if (n.z == 0.0) {
@@ -75,16 +81,19 @@ void LocalBasis(vec3 n, out vec3 b1, out vec3 b2) {
   b2 = vec3(b, sign_ + n.y * n.y * a, -n.y);
 }
 
+// 将非线性深度值转换为线性深度值
 float Linear01Depth( float z )
 {
   float farDivNear = uZBufferParams.y / uZBufferParams.x;
   return 1.0 / ( ( 1.0 - farDivNear) * z + farDivNear);
 }
 
+//将齐次坐标投影到屏幕空间，透视除法
 vec4 Project(vec4 a) {
   return a / a.w;
 }
 
+//计算世界空间点的线性深度值
 float GetDepth(vec3 posWorld) {
   //screen space linearDepth
   float screenZ = Project(vWorldToScreen * vec4(posWorld, 1.0)).z * 0.5 + 0.5;
@@ -96,25 +105,27 @@ float GetDepth(vec3 posWorld) {
  * Transform point from world space to screen space([0, 1] x [0, 1])
  *
  */
+ //将世界空间点转换为屏幕空间坐标
 vec2 GetScreenCoordinate(vec3 posWorld) {
   vec2 uv = Project(vWorldToScreen * vec4(posWorld, 1.0)).xy * 0.5 + 0.5;
   return uv;
 }
 
+//从G-Buffer中读取深度
 float GetGBufferDepth(vec2 uv) {
   return Linear01Depth(texture(uGDepth, uv).x);
 }
-
+//从G-Buffer中读取法线
 vec3 GetGBufferNormalWorld(vec2 uv) {
   vec3 normal = texture(uGNormalWS, uv).xyz;
   return normal;
 }
-
+//从G-Buffer中读取阴影
 float GetGBufferuShadow(vec2 uv) {
   float visibility = texture(uGShadow, uv).x;
   return visibility;
 }
-
+//从G-Buffer中读取漫反射反照率
 vec3 GetGBufferDiffuse(vec2 uv) {
   vec3 diffuse = texture(uGDiffuse, uv).xyz;
   diffuse = pow(diffuse, vec3(2.2));
@@ -138,12 +149,15 @@ vec3 EvalDiffuse(vec2 uv) {
  * uv is in screen space, [0, 1] x [0, 1].
  *
  */
+ //着色点位于 uv 处得到的光源的辐射度，并且需要考虑遮挡关系
 vec3 EvalDirectionalLight(vec2 uv) {
   vec3 Le = GetGBufferuShadow(uv) * uLightRadiance;
   return Le;
 }
 
-
+// 根据BRDF的lobe，生成一根或多根光线，我们假设这里是镜面反射，那就只需要考虑一根反射光线，
+//然后以固定步长沿着反射光线进行步进，每次步进都需要检查步进后光线的深度和场景的深度，
+//直到光线深度大于等于场景深度，就获取该交点处的albedo，然后根据渲染方程进行Shading
 bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {
   float step = 0.02;
   const int totalStepTimes = 1000; 
@@ -197,36 +211,38 @@ void main() {
   vec3 wo = normalize(uCameraPos - worldPos);
 
   //test
-  L = EvalReflect(wi,wo,screenUV);
+  //L = EvalReflect(wi,wo,screenUV);
 
-  // //直接光照
-  // //L = V * Le * brdf * cos
-  // vec3 L_Normal = GetGBufferNormalWorld(screenUV);
-  // L = EvalDiffuse(screenUV) * EvalDirectionalLight(screenUV) * max(0., dot(L_Normal, wi));
+   //直接光照，直接光照的计算是基于物理模型的直接应用，不需要对采样过程进行校正，所以不需要除以 PDF。
+   //L = V * Le * brdf * cos
+   vec3 L_Normal = GetGBufferNormalWorld(screenUV);
+   L = EvalDiffuse(screenUV) * EvalDirectionalLight(screenUV) * max(0., dot(L_Normal, wi));
 
-  // //间接光
-  // vec3 L_ind = vec3(0.0);
-  // for(int i = 0; i < SAMPLE_NUM; i++){
-  //   float pdf;
-  //   vec3 localDir = SampleHemisphereCos(s, pdf);
-  //   vec3 L_ind_Normal = GetGBufferNormalWorld(screenUV);
-  //   vec3 b1, b2;
-  //   LocalBasis(L_ind_Normal, b1, b2);
-  //   vec3 dir = normalize(mat3(b1, b2, L_ind_Normal) * localDir);
+  //间接光
+  vec3 L_ind = vec3(0.0);
+  // SAMPLE_NUM为1，因此有很多噪点
+  for(int i = 0; i < SAMPLE_NUM; i++){
+    float pdf;
+    vec3 localDir = SampleHemisphereCos(s, pdf);
+    vec3 L_ind_Normal = GetGBufferNormalWorld(screenUV);
+    vec3 b1, b2;
+    LocalBasis(L_ind_Normal, b1, b2);
+    vec3 dir = normalize(mat3(b1, b2, L_ind_Normal) * localDir);
 
-  //   //world space pos
-  //   vec3 hitPos;
-  //   if(RayMarch(worldPos, dir, hitPos)){
-  //     vec2 hitScreenUV = GetScreenCoordinate(hitPos);
-  //     //castRay =  V * Le * brdf * cos.
-  //     vec3 hitNormal = GetGBufferNormalWorld(hitScreenUV);
-  //     vec3 castRay = EvalDiffuse(hitScreenUV) * EvalDirectionalLight(hitScreenUV) * max(0., dot(hitNormal, wi));
-  //     //L_ind += castRay * brdf * cos / pdf
-  //     L_ind += castRay * EvalDiffuse(screenUV) * max(0., dot(L_ind_Normal, dir)) / pdf;
-  //   }
-  // }
-  // L_ind /= float(SAMPLE_NUM);
-  // L = L + L_ind;
+    //world space pos
+    vec3 hitPos;
+    if(RayMarch(worldPos, dir, hitPos)){
+      vec2 hitScreenUV = GetScreenCoordinate(hitPos);
+      //castRay =  V * Le * brdf * cos.
+      vec3 hitNormal = GetGBufferNormalWorld(hitScreenUV);
+      vec3 castRay = EvalDiffuse(hitScreenUV) * EvalDirectionalLight(hitScreenUV) * max(0., dot(hitNormal, wi));
+      //L_ind += castRay * brdf * cos / pdf
+      // 需要从半球面上随机采样多个方向，这些方向是根据某种分布生成的，因此需要除以 PDF 来校正采样偏差，确保结果是无偏的
+      L_ind += castRay * EvalDiffuse(screenUV) * max(0., dot(L_ind_Normal, dir)) / pdf;
+    }
+  }
+  L_ind /= float(SAMPLE_NUM);
+  L = L + L_ind;
 
   vec3 color = pow(L, vec3(1.0 / 2.2));
   FragColor = vec4(vec3(color.rgb), 1.0);

@@ -51,9 +51,9 @@ class WebGLRenderer {
                     let cameraModelMatrix = mat4.create();
 
                     
-                    // mat4.fromRotation(cameraModelMatrix, timer * 5, [0, 1, 0]);
-                    // // Bonus - Fast Spherical Harmonic Rotation
-                    // let precomputeL_RGBMat3 = getRotationPrecomputeL(precomputeL[guiParams.envmapId], cameraModelMatrix);
+                    mat4.fromRotation(cameraModelMatrix, timer * 5, [0, 1, 0]);
+                    // Bonus - Fast Spherical Harmonic Rotation
+                    let precomputeL_RGBMat3 = getRotationPrecomputeL(precomputeL[guiParams.envmapId], cameraModelMatrix);
                     
 
                     if (k == 'uMoveWithCamera') { // The rotation of the skybox
@@ -82,3 +82,9 @@ class WebGLRenderer {
 
     }
 }
+
+
+
+
+
+

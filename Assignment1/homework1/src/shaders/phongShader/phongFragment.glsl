@@ -153,6 +153,7 @@ float PCF(sampler2D shadowMap, vec4 coords, float biasC, float filterRadius) {
 }
 
 
+//根据公式的近似计算方法
 float findBlocker(sampler2D shadowMap, vec4 coords, float zReceiver, float calibratedLightSize) {
   int blockerNum = 0;
   float avgBlockDepth = 0.;
@@ -202,7 +203,7 @@ float PCSS(sampler2D shadowMap, vec4 coords, float biasC,float calibratedLightSi
   return PCF(shadowMap, coords, biasC, filterRadius);
 }
 
-
+ 
 vec3 blinnPhong() {
   
   vec3 color = texture2D(uSampler, vTextureCoord).rgb;
@@ -215,6 +216,7 @@ vec3 blinnPhong() {
 
   vec3 lightDir = normalize(uLightPos);
   vec3 normal = normalize(vNormal);
+  
   float diff = max(dot(lightDir, normal), 0.0);
   vec3 diffuse = diff * color * attenuation;
 
@@ -227,6 +229,7 @@ vec3 blinnPhong() {
   vec3 phongColor = pow(radiance, vec3(1.0 / 2.2));
   return phongColor;
 }
+
 //gl_FragCoord.z
 float LinearizeDepth(float depth) 
 {

@@ -4,6 +4,7 @@ precision mediump float;
 
 varying highp vec3 vColor;
 
+//色调映射
 vec3 toneMapping(vec3 color){
     vec3 result;
 
